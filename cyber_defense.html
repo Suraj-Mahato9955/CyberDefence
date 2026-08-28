@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CyberDefense — Monitoring System</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #050a0f;
+  --surface: #0a1520;
+  --surface2: #0f1e2e;
+  --border: rgba(0,200,150,0.15);
+  --border2: rgba(0,200,150,0.3);
+  --accent: #00c896;
+  --accent2: #00ffcc;
+  --red: #ff4455;
+  --amber: #ffaa00;
+  --blue: #3399ff;
+  --text: #cce8e0;
+  --text2: #5a8a78;
+  --mono: 'Share Tech Mono', monospace;
+  --head: 'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); overflow-x: hidden; }
+
+/* Scanline overlay */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+  pointer-events: none; z-index: 9999;
+}
+
+/* Grid noise bg */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,200,150,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,200,150,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none; z-index: 0;
+}
+
+.layout { display: flex; height: 100vh; position: relative; z-index: 1; }
+
+/* SIDEBAR */
+.sidebar {
+  width: 220px; flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 0;
+}
+.logo {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-icon {
+  width: 36px; height: 36px;
+  border: 1.5px solid var(--accent);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px;
+}
+.logo-icon svg { width: 20px; height: 20px; }
+.logo-name { font-family: var(--head); font-size: 13px; font-weight: 800; color: var(--accent2); letter-spacing: 0.05em; line-height: 1.2; }
+.logo-sub { font-size: 9px; color: var(--text2); letter-spacing: 0.15em; margin-top: 2px; }
+
+.nav { flex: 1; padding: 16px 0; }
+.nav-section { font-size: 9px; color: var(--text2); letter-spacing: 0.2em; padding: 0 20px; margin: 16px 0 6px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 20px;
+  font-size: 12px; color: var(--text2);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+  position: relative;
+}
+.nav-item:hover { color: var(--text); background: rgba(0,200,150,0.05); }
+.nav-item.active {
+  color: var(--accent2);
+  background: rgba(0,200,150,0.08);
+  border-left-color: var(--accent);
+}
+.nav-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto; font-size: 9px;
+  padding: 2px 6px; border-radius: 8px;
+  background: rgba(255,68,85,0.2); color: var(--red);
+}
+.nav-badge.warn { background: rgba(255,170,0,0.2); color: var(--amber); }
+
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 10px; color: var(--text2);
+}
+.status-dot {
+  display: inline-block; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--accent);
+  margin-right: 6px;
+  box-shadow: 0 0 6px var(--accent);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+/* MAIN */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* TOPBAR */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.topbar-left { display: flex; align-items: center; gap: 16px; }
+.page-title { font-family: var(--head); font-size: 18px; font-weight: 700; color: #fff; }
+.page-subtitle { font-size: 10px; color: var(--text2); letter-spacing: 0.1em; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.pill {
+  font-size: 10px; padding: 4px 12px;
+  border-radius: 20px; font-family: var(--mono);
+  border: 1px solid;
+}
+.pill-red { border-color: rgba(255,68,85,0.4); color: var(--red); background: rgba(255,68,85,0.08); }
+.pill-amber { border-color: rgba(255,170,0,0.4); color: var(--amber); background: rgba(255,170,0,0.08); }
+.pill-green { border-color: rgba(0,200,150,0.4); color: var(--accent); background: rgba(0,200,150,0.08); }
+.time-display { font-size: 11px; color: var(--text2); }
+
+/* CONTENT */
+.content { flex: 1; overflow-y: auto; padding: 24px 28px; }
+.content::-webkit-scrollbar { width: 4px; }
+.content::-webkit-scrollbar-track { background: transparent; }
+.content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* METRIC GRID */
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.2s;
+}
+.metric-card:hover { border-color: var(--border2); }
+.metric-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.metric-card.danger::before { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.metric-card.warn::before { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.metric-card.info::before { background: var(--blue); box-shadow: 0 0 8px var(--blue); }
+.metric-card.ok::before { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.metric-label { font-size: 9px; letter-spacing: 0.2em; color: var(--text2); margin-bottom: 10px; }
+.metric-value { font-family: var(--head); font-size: 32px; font-weight: 800; line-height: 1; }
+.metric-value.danger { color: var(--red); }
+.metric-value.warn { color: var(--amber); }
+.metric-value.info { color: var(--blue); }
+.metric-value.ok { color: var(--accent); }
+.metric-delta { font-size: 10px; color: var(--text2); margin-top: 6px; }
+.metric-icon {
+  position: absolute; right: 16px; top: 16px;
+  width: 28px; height: 28px; opacity: 0.15;
+}
+
+/* MID SECTION */
+.mid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; margin-bottom: 22px; }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-title { font-size: 9px; letter-spacing: 0.2em; color: var(--text2); }
+.panel-action { font-size: 9px; color: var(--accent); cursor: pointer; letter-spacing: 0.1em; }
+.panel-body { padding: 0; }
+
+/* ALERTS */
+.alert-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+  cursor: default;
+}
+.alert-item:last-child { border-bottom: none; }
+.alert-item:hover { background: rgba(0,200,150,0.04); }
+.alert-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.dot-red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.dot-amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.dot-blue { background: var(--blue); box-shadow: 0 0 6px var(--blue); }
+.dot-green { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.alert-body { flex: 1; }
+.alert-title { font-size: 12px; color: var(--text); line-height: 1.4; }
+.alert-title span { color: var(--accent2); }
+.alert-meta { font-size: 10px; color: var(--text2); margin-top: 2px; }
+.alert-time { font-size: 10px; color: var(--text2); flex-shrink: 0; white-space: nowrap; }
+
+/* RISK BARS */
+.risk-body { padding: 18px; }
+.risk-item { margin-bottom: 16px; }
+.risk-item:last-child { margin-bottom: 0; }
+.risk-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.risk-name { font-size: 11px; color: var(--text); }
+.risk-score { font-size: 11px; font-weight: bold; }
+.risk-track { height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+.risk-fill { height: 100%; border-radius: 3px; transition: width 1s cubic-bezier(0.4,0,0.2,1); }
+
+/* SPARKLINE */
+.sparkline-wrap { padding: 12px 18px; border-top: 1px solid var(--border); }
+.sparkline-label { font-size: 9px; color: var(--text2); letter-spacing: 0.15em; margin-bottom: 8px; }
+.sparkline-svg { width: 100%; height: 40px; }
+
+/* BOTTOM MODULES */
+.modules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.module-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative; overflow: hidden;
+}
+.module-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(0,200,150,0.04) 0%, transparent 60%);
+  opacity: 0; transition: opacity 0.2s;
+}
+.module-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+.module-card:hover::after { opacity: 1; }
+.module-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.module-icon {
+  width: 38px; height: 38px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid;
+}
+.module-icon.red { border-color: rgba(255,68,85,0.4); background: rgba(255,68,85,0.1); }
+.module-icon.amber { border-color: rgba(255,170,0,0.4); background: rgba(255,170,0,0.1); }
+.module-icon.blue { border-color: rgba(51,153,255,0.4); background: rgba(51,153,255,0.1); }
+.module-icon svg { width: 18px; height: 18px; }
+.module-badge { font-size: 9px; padding: 3px 8px; border-radius: 10px; border: 1px solid; }
+.module-badge.danger { border-color: rgba(255,68,85,0.4); color: var(--red); }
+.module-badge.warn { border-color: rgba(255,170,0,0.4); color: var(--amber); }
+.module-badge.ok { border-color: rgba(0,200,150,0.4); color: var(--accent); }
+.module-name { font-family: var(--head); font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.module-desc { font-size: 11px; color: var(--text2); line-height: 1.6; }
+.module-footer { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.module-stat { font-size: 10px; color: var(--text2); }
+.module-arrow { font-size: 12px; color: var(--accent); opacity: 0; transition: opacity 0.2s; }
+.module-card:hover .module-arrow { opacity: 1; }
+
+/* TABS for module detail */
+.tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 22px; }
+.tab {
+  padding: 10px 20px; font-size: 11px; letter-spacing: 0.1em;
+  color: var(--text2); cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: all 0.15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+
+/* PHISHING SECTION */
+.section { display: none; }
+.section.visible { display: block; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
+
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 9px; letter-spacing: 0.2em; color: var(--text2); margin-bottom: 6px; display: block; }
+.form-input, .form-select, .form-textarea {
+  width: 100%; padding: 9px 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-family: var(--mono); font-size: 12px;
+  transition: border-color 0.15s; outline: none;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--border2); }
+.form-textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+.form-select { appearance: none; cursor: pointer; }
+option { background: var(--surface2); }
+
+.btn {
+  padding: 9px 20px; border-radius: 6px; font-family: var(--mono);
+  font-size: 11px; letter-spacing: 0.1em; cursor: pointer;
+  border: 1px solid; transition: all 0.15s;
+}
+.btn-accent {
+  background: rgba(0,200,150,0.1); border-color: var(--accent);
+  color: var(--accent2);
+}
+.btn-accent:hover { background: rgba(0,200,150,0.2); }
+.btn-danger {
+  background: rgba(255,68,85,0.1); border-color: var(--red);
+  color: var(--red);
+}
+.btn-danger:hover { background: rgba(255,68,85,0.2); }
+
+.analysis-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 11px;
+}
+.analysis-row:last-child { border-bottom: none; }
+.check-icon { width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 9px; }
+.check-pass { background: rgba(0,200,150,0.15); color: var(--accent); }
+.check-fail { background: rgba(255,68,85,0.15); color: var(--red); }
+.check-warn { background: rgba(255,170,0,0.15); color: var(--amber); }
+.check-label { flex: 1; color: var(--text); }
+.check-result { color: var(--text2); }
+
+/* PORT SCAN TABLE */
+.data-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.data-table th { font-size: 9px; letter-spacing: 0.15em; color: var(--text2); text-align: left; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text); }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: rgba(0,200,150,0.03); }
+.port-badge { font-size: 10px; padding: 2px 8px; border-radius: 4px; }
+
+/* RANSOMWARE STEPS */
+.step {
+  display: flex; gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.step:last-child { border-bottom: none; }
+.step-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: bold; flex-shrink: 0;
+  border: 1px solid;
+}
+.step-num.done { border-color: var(--accent); color: var(--accent); background: rgba(0,200,150,0.1); }
+.step-num.active { border-color: var(--amber); color: var(--amber); background: rgba(255,170,0,0.1); animation: pulse 1.5s infinite; }
+.step-num.pending { border-color: var(--border2); color: var(--text2); }
+.step-body { flex: 1; }
+.step-title { font-size: 13px; color: #fff; margin-bottom: 3px; }
+.step-desc { font-size: 11px; color: var(--text2); line-height: 1.5; }
+.step-time { font-size: 10px; color: var(--text2); margin-top: 4px; }
+
+/* LOG TABLE */
+.log-line {
+  display: flex; gap: 16px;
+  padding: 7px 18px; font-size: 11px;
+  border-bottom: 1px solid rgba(0,200,150,0.06);
+  font-family: var(--mono);
+  transition: background 0.1s;
+}
+.log-line:hover { background: rgba(0,200,150,0.03); }
+.log-ts { color: var(--text2); flex-shrink: 0; width: 150px; }
+.log-level { width: 60px; flex-shrink: 0; font-weight: bold; }
+.log-level.crit { color: var(--red); }
+.log-level.warn { color: var(--amber); }
+.log-level.info { color: var(--blue); }
+.log-level.ok { color: var(--accent); }
+.log-msg { color: var(--text); flex: 1; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.content > * { animation: fadeIn 0.3s ease forwards; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 20 20" fill="none">
+        <path d="M10 2L3 6v5c0 4 3.1 7.7 7 8.9C13.9 18.7 17 15 17 11V6L10 2z" stroke="#00c896" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M7 10l2 2 4-4" stroke="#00c896" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="logo-name">CYBERDEFENSE</div>
+    <div class="logo-sub">MONITORING SYSTEM v1.0</div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-section">MAIN</div>
+    <div class="nav-item active" onclick="showSection('overview', this)">
+      <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+      Overview
+    </div>
+
+    <div class="nav-section">MODULES</div>
+    <div class="nav-item" onclick="showSection('phishing', this)">
+      <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M1 6l7 4.5L15 6" stroke="currentColor" stroke-width="1.2"/></svg>
+      Phishing Detection
+      <span class="nav-badge">7</span>
+    </div>
+    <div class="nav-item" onclick="showSection('network', this)">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2"/><line x1="8" y1="1" x2="8" y2="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="8" y1="10.5" x2="8" y2="15" stroke="currentColor" stroke-width="1.2"/></svg>
+      Network Assessment
+      <span class="nav-badge warn">23</span>
+    </div>
+    <div class="nav-item" onclick="showSection('ransomware', this)">
+      <svg viewBox="0 0 16 16" fill="none"><rect x="4" y="7" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="currentColor" stroke-width="1.2"/></svg>
+      Ransomware Response
+    </div>
+
+    <div class="nav-section">DATA</div>
+    <div class="nav-item" onclick="showSection('logs', this)">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      System Logs
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div><span class="status-dot"></span>All systems operational</div>
+    <div style="margin-top:6px;font-size:9px;">DB: MySQL · Backend: Python</div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div>
+        <div class="page-title" id="page-title">System Overview</div>
+        <div class="page-subtitle">REAL-TIME THREAT MONITORING</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="pill pill-red">2 Critical</span>
+      <span class="pill pill-amber">5 Warnings</span>
+      <span class="pill pill-green">Active</span>
+      <span class="time-display" id="clock"></span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div id="section-overview" class="section visible">
+      <div class="metrics">
+        <div class="metric-card danger">
+          <div class="metric-label">TOTAL ALERTS TODAY</div>
+          <div class="metric-value danger">14</div>
+          <div class="metric-delta">↑ +3 since yesterday</div>
+          <svg class="metric-icon" viewBox="0 0 28 28" fill="none"><path d="M14 3L3 22h22L14 3z" stroke="#ff4455" stroke-width="2"/><line x1="14" y1="12" x2="14" y2="17" stroke="#ff4455" stroke-width="2"/><circle cx="14" cy="20" r="1" fill="#ff4455"/></svg>
+        </div>
+        <div class="metric-card warn">
+          <div class="metric-label">PHISHING ATTEMPTS</div>
+          <div class="metric-value warn">7</div>
+          <div class="metric-delta">4 blocked · 3 flagged</div>
+          <svg class="metric-icon" viewBox="0 0 28 28" fill="none"><rect x="2" y="6" width="24" height="16" rx="3" stroke="#ffaa00" stroke-width="2"/><path d="M2 10l12 8 12-8" stroke="#ffaa00" stroke-width="2"/></svg>
+        </div>
+        <div class="metric-card info">
+          <div class="metric-label">OPEN PORTS FOUND</div>
+          <div class="metric-value info">23</div>
+          <div class="metric-delta">Last scan: 1h ago</div>
+          <svg class="metric-icon" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="11" stroke="#3399ff" stroke-width="2"/><circle cx="14" cy="14" r="4" stroke="#3399ff" stroke-width="2"/></svg>
+        </div>
+        <div class="metric-card danger">
+          <div class="metric-label">SYSTEM RISK SCORE</div>
+          <div class="metric-value danger">78<span style="font-size:16px;font-weight:400;">/100</span></div>
+          <div class="metric-delta" style="color:var(--red);">HIGH RISK</div>
+          <svg class="metric-icon" viewBox="0 0 28 28" fill="none"><path d="M14 4L4 10v7c0 5 4 9 10 11 6-2 10-6 10-11v-7L14 4z" stroke="#ff4455" stroke-width="2"/></svg>
+        </div>
+      </div>
+
+      <div class="mid">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">LIVE ALERTS FEED</span>
+            <span class="panel-action">VIEW ALL →</span>
+          </div>
+          <div class="panel-body">
+            <div class="alert-item"><div class="alert-dot dot-red"></div><div class="alert-body"><div class="alert-title"><span>Phishing login page</span> detected — fake Google form submitted</div><div class="alert-meta">Source: 192.168.1.44 · Module: Phishing</div></div><div class="alert-time">2m ago</div></div>
+            <div class="alert-item"><div class="alert-dot dot-red"></div><div class="alert-body"><div class="alert-title"><span>Port 3389 (RDP)</span> exposed — possible brute force</div><div class="alert-meta">Source: 10.0.0.12 · Module: Network</div></div><div class="alert-time">11m ago</div></div>
+            <div class="alert-item"><div class="alert-dot dot-amber"></div><div class="alert-body"><div class="alert-title"><span>Suspicious email</span> — spoofed sender domain flagged</div><div class="alert-meta">To: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="097c7a6c7b496a666479686770276a6664">[email&#160;protected]</a> · Module: Phishing</div></div><div class="alert-time">34m ago</div></div>
+            <div class="alert-item"><div class="alert-dot dot-amber"></div><div class="alert-body"><div class="alert-title"><span>Credential harvest</span> attempt on /login endpoint</div><div class="alert-meta">Source: 203.0.113.5 · Module: Phishing</div></div><div class="alert-time">1h ago</div></div>
+            <div class="alert-item"><div class="alert-dot dot-blue"></div><div class="alert-body"><div class="alert-title"><span>Ransomware playbook</span> triggered — isolating host</div><div class="alert-meta">Host: DESKTOP-7F2A · Module: Ransomware</div></div><div class="alert-time">2h ago</div></div>
+            <div class="alert-item"><div class="alert-dot dot-green"></div><div class="alert-body"><div class="alert-title"><span>Scheduled scan</span> completed — 0 critical findings</div><div class="alert-meta">Duration: 4m 12s · Module: Network</div></div><div class="alert-time">3h ago</div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">RISK BY MODULE</span></div>
+          <div class="risk-body">
+            <div class="risk-item">
+              <div class="risk-header"><span class="risk-name">Phishing</span><span class="risk-score" style="color:var(--red);">82%</span></div>
+              <div class="risk-track"><div class="risk-fill" style="width:82%;background:var(--red);box-shadow:0 0 6px var(--red);"></div></div>
+            </div>
+            <div class="risk-item">
+              <div class="risk-header"><span class="risk-name">Network</span><span class="risk-score" style="color:var(--amber);">65%</span></div>
+              <div class="risk-track"><div class="risk-fill" style="width:65%;background:var(--amber);box-shadow:0 0 6px var(--amber);"></div></div>
+            </div>
+            <div class="risk-item">
+              <div class="risk-header"><span class="risk-name">Auth / Login</span><span class="risk-score" style="color:var(--amber);">55%</span></div>
+              <div class="risk-track"><div class="risk-fill" style="width:55%;background:var(--amber);box-shadow:0 0 6px var(--amber);"></div></div>
+            </div>
+            <div class="risk-item">
+              <div class="risk-header"><span class="risk-name">Ransomware</span><span class="risk-score" style="color:var(--blue);">40%</span></div>
+              <div class="risk-track"><div class="risk-fill" style="width:40%;background:var(--blue);box-shadow:0 0 6px var(--blue);"></div></div>
+            </div>
+            <div class="risk-item">
+              <div class="risk-header"><span class="risk-name">Database</span><span class="risk-score" style="color:var(--accent);">20%</span></div>
+              <div class="risk-track"><div class="risk-fill" style="width:20%;background:var(--accent);box-shadow:0 0 6px var(--accent);"></div></div>
+            </div>
+          </div>
+          <div class="sparkline-wrap">
+            <div class="sparkline-label">RISK TREND — LAST 8 HOURS</div>
+            <svg class="sparkline-svg" viewBox="0 0 260 40" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#ff4455" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#ff4455" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,32 L32,28 L65,30 L97,18 L130,24 L162,14 L195,19 L227,10 L260,16 L260,40 L0,40 Z" fill="url(#sg)"/>
+              <polyline points="0,32 32,28 65,30 97,18 130,24 162,14 195,19 227,10 260,16" fill="none" stroke="#ff4455" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="modules">
+        <div class="module-card" onclick="showSection('phishing', document.querySelector('[onclick*=phishing]'))">
+          <div class="module-header">
+            <div class="module-icon red">
+              <svg viewBox="0 0 18 18" fill="none"><rect x="1" y="3" width="16" height="12" rx="2" stroke="#ff4455" stroke-width="1.3"/><path d="M1 7l8 5 8-5" stroke="#ff4455" stroke-width="1.3"/></svg>
+            </div>
+            <span class="module-badge danger">7 ACTIVE</span>
+          </div>
+          <div class="module-name">Phishing Simulation</div>
+          <div class="module-desc">Fake email + login page generator. Detects credential harvesting and spoofed sender domains.</div>
+          <div class="module-footer">
+            <span class="module-stat">Last: 2 min ago</span>
+            <span class="module-arrow">→</span>
+          </div>
+        </div>
+        <div class="module-card" onclick="showSection('network', document.querySelector('[onclick*=network]'))">
+          <div class="module-header">
+            <div class="module-icon amber">
+              <svg viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#ffaa00" stroke-width="1.3"/><circle cx="9" cy="9" r="3" stroke="#ffaa00" stroke-width="1.3"/><line x1="9" y1="2" x2="9" y2="6" stroke="#ffaa00" stroke-width="1.3"/></svg>
+            </div>
+            <span class="module-badge warn">23 PORTS</span>
+          </div>
+          <div class="module-name">Network Assessment</div>
+          <div class="module-desc">Port scanner + vulnerability analyzer. Maps open services and flags risky configurations.</div>
+          <div class="module-footer">
+            <span class="module-stat">Scan: 1h ago</span>
+            <span class="module-arrow">→</span>
+          </div>
+        </div>
+        <div class="module-card" onclick="showSection('ransomware', document.querySelector('[onclick*=ransomware]'))">
+          <div class="module-header">
+            <div class="module-icon blue">
+              <svg viewBox="0 0 18 18" fill="none"><rect x="4" y="8" width="10" height="7" rx="1" stroke="#3399ff" stroke-width="1.3"/><path d="M6 8V6a3 3 0 016 0v2" stroke="#3399ff" stroke-width="1.3"/></svg>
+            </div>
+            <span class="module-badge ok">STANDBY</span>
+          </div>
+          <div class="module-name">Ransomware Response</div>
+          <div class="module-desc">Automated playbook: detect, isolate, alert. Logs every action for post-incident review.</div>
+          <div class="module-footer">
+            <span class="module-stat">Playbook: ready</span>
+            <span class="module-arrow">→</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="section-phishing" class="section">
+      <div class="tab-bar">
+        <div class="tab active" onclick="switchTab(this,'phish-simulate')">Simulate Attack</div>
+        <div class="tab" onclick="switchTab(this,'phish-detect')">Detection Analysis</div>
+        <div class="tab" onclick="switchTab(this,'phish-history')">History</div>
+      </div>
+
+      <div id="phish-simulate">
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">CRAFT PHISHING EMAIL</span></div>
+            <div style="padding:18px;">
+              <div class="form-group">
+                <label class="form-label">ATTACK TYPE</label>
+                <select class="form-select">
+                  <option>Credential Harvesting</option>
+                  <option>Spear Phishing</option>
+                  <option>CEO Fraud</option>
+                  <option>Fake Invoice</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">SPOOFED SENDER</label>
+                <input class="form-input" type="text" value="security@google-support.com" placeholder="sender@fakdomain.com"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">TARGET EMAIL</label>
+                <input class="form-input" type="text" placeholder="victim@company.com"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">EMAIL BODY</label>
+                <textarea class="form-textarea">Your account has been compromised. Click below to verify your identity immediately or your account will be suspended within 24 hours.</textarea>
+              </div>
+              <div style="display:flex;gap:10px;">
+                <button class="btn btn-accent" onclick="runAnalysis()">LAUNCH SIMULATION</button>
+                <button class="btn btn-danger">CLEAR</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">FAKE LOGIN PAGE PREVIEW</span></div>
+            <div style="padding:18px;">
+              <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:20px;text-align:center;">
+                <div style="width:40px;height:40px;margin:0 auto 12px;background:rgba(51,153,255,0.1);border:1px solid rgba(51,153,255,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2C7.8 2 6 3.8 6 6s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4zM3 18c0-3.9 3.1-7 7-7s7 3.1 7 7" stroke="#3399ff" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </div>
+                <div style="font-family:var(--head);color:#fff;font-size:14px;margin-bottom:16px;">Sign in to Google</div>
+                <input class="form-input" type="text" placeholder="Email or phone" style="margin-bottom:8px;text-align:center;"/>
+                <input class="form-input" type="password" placeholder="Password" style="margin-bottom:12px;text-align:center;"/>
+                <button class="btn btn-accent" style="width:100%;">NEXT</button>
+                <div style="font-size:10px;color:var(--text2);margin-top:12px;">⚠ This is a simulated phishing page for educational purposes</div>
+              </div>
+              <div style="margin-top:12px;padding:10px;background:rgba(255,68,85,0.08);border:1px solid rgba(255,68,85,0.2);border-radius:6px;font-size:11px;color:var(--red);">
+                DETECTION: URL mismatch · No HTTPS cert · Domain age: 2 days
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="analysis-panel" style="display:none;">
+          <div class="panel-head"><span class="panel-title">EMAIL ANALYSIS RESULTS</span><span class="pill pill-red" style="font-size:9px;">HIGH RISK</span></div>
+          <div style="padding:4px 0;">
+            <div class="analysis-row"><div class="check-icon check-fail">✕</div><div class="check-label">Sender domain verified</div><div class="check-result" style="color:var(--red);">SPOOFED — google-support.com ≠ google.com</div></div>
+            <div class="analysis-row"><div class="check-icon check-fail">✕</div><div class="check-label">SPF / DKIM record</div><div class="check-result" style="color:var(--red);">MISSING — domain has no mail policy</div></div>
+            <div class="analysis-row"><div class="check-icon check-fail">✕</div><div class="check-label">Urgency language detected</div><div class="check-result" style="color:var(--red);">YES — "immediately", "suspended", "24 hours"</div></div>
+            <div class="analysis-row"><div class="check-icon check-warn">!</div><div class="check-label">Embedded link destination</div><div class="check-result" style="color:var(--amber);">Redirects to unknown domain</div></div>
+            <div class="analysis-row"><div class="check-icon check-pass">✓</div><div class="check-label">Attachments</div><div class="check-result" style="color:var(--accent);">NONE — no malicious attachments</div></div>
+            <div class="analysis-row"><div class="check-icon check-fail">✕</div><div class="check-label">Phishing score</div><div class="check-result" style="color:var(--red);font-weight:bold;">94 / 100 — BLOCK IMMEDIATELY</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="phish-detect" style="display:none;">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">INCOMING EMAIL SCANNER</span></div>
+          <div style="padding:18px;">
+            <div class="form-group">
+              <label class="form-label">PASTE EMAIL HEADERS / CONTENT</label>
+              <textarea class="form-textarea" style="min-height:140px;" placeholder="From: security@paypal-verify.net&#10;Subject: Urgent: Confirm your account&#10;...paste full email source here..."></textarea>
+            </div>
+            <button class="btn btn-accent">ANALYZE EMAIL</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="phish-history" style="display:none;">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">PHISHING ATTEMPT LOG</span></div>
+          <table class="data-table">
+            <thead><tr><th>TIMESTAMP</th><th>SENDER</th><th>TARGET</th><th>TYPE</th><th>SCORE</th><th>ACTION</th></tr></thead>
+            <tbody>
+              <tr><td style="color:var(--text2);">2024-01-15 14:02</td><td><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="5b283e382e29322f221b3c34343c373e76282e2b2b34292f75383436">[email&#160;protected]</a></td><td><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="254441484c4b65464a4855444b5c0b464a48">[email&#160;protected]</a></td><td>Credential Harvest</td><td style="color:var(--red);">94</td><td><span class="port-badge" style="background:rgba(255,68,85,0.1);color:var(--red);border:1px solid rgba(255,68,85,0.3);">BLOCKED</span></td></tr>
+              <tr><td style="color:var(--text2);">2024-01-15 11:34</td><td><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="9ef6ecdeeeffe7eefff2b3e8fbecf7f8e7b0f0fbea">[email&#160;protected]</a></td><td><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="85e3ecebe4ebe6e0c5e6eae8f5e4ebfcabe6eae8">[email&#160;protected]</a></td><td>Fake Invoice</td><td style="color:var(--red);">87</td><td><span class="port-badge" style="background:rgba(255,68,85,0.1);color:var(--red);border:1px solid rgba(255,68,85,0.3);">BLOCKED</span></td></tr>
+              <tr><td style="color:var(--text2);">2024-01-15 09:12</td><td><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4526202a05262a2835712b3c6b262a28">[email&#160;protected]</a></td><td><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="82e3e1e1edf7ecf6f1c2e1edeff2e3ecfbace1edef">[email&#160;protected]</a></td><td>CEO Fraud</td><td style="color:var(--amber);">71</td><td><span class="port-badge" style="background:rgba(255,170,0,0.1);color:var(--amber);border:1px solid rgba(255,170,0,0.3);">FLAGGED</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="section-network" class="section">
+      <div style="display:flex;gap:12px;margin-bottom:22px;">
+        <div style="flex:1;" class="panel">
+          <div style="padding:16px 18px;">
+            <div class="form-label">TARGET HOST / RANGE</div>
+            <div style="display:flex;gap:10px;margin-top:6px;">
+              <input class="form-input" type="text" value="192.168.1.0/24" style="flex:1;"/>
+              <button class="btn btn-accent">START SCAN</button>
+            </div>
+          </div>
+        </div>
+        <div class="metric-card info" style="width:140px;flex-shrink:0;margin:0;">
+          <div class="metric-label">OPEN PORTS</div>
+          <div class="metric-value info" style="font-size:28px;">23</div>
+        </div>
+        <div class="metric-card warn" style="width:140px;flex-shrink:0;margin:0;">
+          <div class="metric-label">VULNERABLE</div>
+          <div class="metric-value warn" style="font-size:28px;">5</div>
+        </div>
+        <div class="metric-card ok" style="width:140px;flex-shrink:0;margin:0;">
+          <div class="metric-label">SAFE PORTS</div>
+          <div class="metric-value ok" style="font-size:28px;">18</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">PORT SCAN RESULTS — 192.168.1.0/24</span><span class="panel-action">EXPORT CSV</span></div>
+        <table class="data-table">
+          <thead><tr><th>HOST</th><th>PORT</th><th>SERVICE</th><th>STATE</th><th>RISK</th><th>NOTES</th></tr></thead>
+          <tbody>
+            <tr><td>192.168.1.12</td><td>3389</td><td>RDP</td><td style="color:var(--accent);">OPEN</td><td><span class="port-badge" style="background:rgba(255,68,85,0.1);color:var(--red);border:1px solid rgba(255,68,85,0.3);">CRITICAL</span></td><td style="color:var(--text2);">Brute force risk · Restrict to VPN</td></tr>
+            <tr><td>192.168.1.12</td><td>23</td><td>Telnet</td><td style="color:var(--accent);">OPEN</td><td><span class="port-badge" style="background:rgba(255,68,85,0.1);color:var(--red);border:1px solid rgba(255,68,85,0.3);">CRITICAL</span></td><td style="color:var(--text2);">Plaintext auth · Disable immediately</td></tr>
+            <tr><td>192.168.1.8</td><td>21</td><td>FTP</td><td style="color:var(--accent);">OPEN</td><td><span class="port-badge" style="background:rgba(255,170,0,0.1);color:var(--amber);border:1px solid rgba(255,170,0,0.3);">HIGH</span></td><td style="color:var(--text2);">Anonymous login enabled</td></tr>
+            <tr><td>192.168.1.5</td><td>22</td><td>SSH</td><td style="color:var(--accent);">OPEN</td><td><span class="port-badge" style="background:rgba(255,170,0,0.1);color:var(--amber);border:1px solid rgba(255,170,0,0.3);">MEDIUM</span></td><td style="color:var(--text2);">Key auth required · Version outdated</td></tr>
+            <tr><td>192.168.1.5</td><td>80</td><td>HTTP</td><td style="color:var(--accent);">OPEN</td><td><span class="port-badge" style="background:rgba(255,170,0,0.1);color:var(--amber);border:1px solid rgba(255,170,0,0.3);">MEDIUM</span></td><td style="color:var(--text2);">No HTTPS · Redirect recommended</td></tr>
+            <tr><td>192.168.1.1</td><td>443</td><td>HTTPS</td><td style="color:var(--accent);">OPEN</td><td><span class="port-badge" style="background:rgba(0,200,150,0.1);color:var(--accent);border:1px solid rgba(0,200,150,0.3);">LOW</span></td><td style="color:var(--text2);">TLS 1.3 · Cert valid 180d</td></tr>
+            <tr><td>192.168.1.20</td><td>3306</td><td>MySQL</td><td style="color:var(--accent);">OPEN</td><td><span class="port-badge" style="background:rgba(255,68,85,0.1);color:var(--red);border:1px solid rgba(255,68,85,0.3);">CRITICAL</span></td><td style="color:var(--text2);">Exposed externally · Firewall now</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="section-ransomware" class="section">
+      <div class="two-col" style="margin-bottom:22px;">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">THREAT DETECTION</span></div>
+          <div style="padding:18px;">
+            <div class="form-group">
+              <label class="form-label">MONITORED DIRECTORY</label>
+              <input class="form-input" value="C:\Users\Desktop\Documents" type="text"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">DETECTION SENSITIVITY</label>
+              <select class="form-select"><option>High — Flag on any mass rename</option><option>Medium</option><option>Low</option></select>
+            </div>
+            <button class="btn btn-accent" style="margin-right:8px;">START MONITORING</button>
+            <button class="btn btn-danger">TRIGGER TEST</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">DETECTION INDICATORS</span></div>
+          <div style="padding:6px 0;">
+            <div class="analysis-row"><div class="check-icon check-pass">✓</div><div class="check-label">Mass file rename detected</div><div class="check-result" style="color:var(--text2);">Monitoring</div></div>
+            <div class="analysis-row"><div class="check-icon check-pass">✓</div><div class="check-label">File extension change (.enc, .locked)</div><div class="check-result" style="color:var(--text2);">Monitoring</div></div>
+            <div class="analysis-row"><div class="check-icon check-pass">✓</div><div class="check-label">Shadow copy deletion (vssadmin)</div><div class="check-result" style="color:var(--text2);">Monitoring</div></div>
+            <div class="analysis-row"><div class="check-icon check-pass">✓</div><div class="check-label">Rapid disk write activity</div><div class="check-result" style="color:var(--text2);">Monitoring</div></div>
+            <div class="analysis-row"><div class="check-icon check-pass">✓</div><div class="check-label">Ransom note file (README.txt)</div><div class="check-result" style="color:var(--text2);">Monitoring</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">INCIDENT RESPONSE PLAYBOOK</span><span class="panel-action">RUN PLAYBOOK</span></div>
+        <div class="playbook">
+          <div class="step"><div class="step-num done">1</div><div class="step-body"><div class="step-title">Detection triggered</div><div class="step-desc">Ransomware behavior detected — 847 files renamed with .enc extension in under 60 seconds.</div><div class="step-time">Completed · 14:02:11</div></div></div>
+          <div class="step"><div class="step-num done">2</div><div class="step-body"><div class="step-title">Network isolation</div><div class="step-desc">Host DESKTOP-7F2A disconnected from network. All inbound/outbound connections dropped.</div><div class="step-time">Completed · 14:02:13</div></div></div>
+          <div class="step"><div class="step-num active">3</div><div class="step-body"><div class="step-title">Alert team + log incident</div><div class="step-desc">Notifying security team via email and Slack. Writing incident to MySQL event log.</div><div class="step-time">In progress · 14:02:15</div></div></div>
+          <div class="step"><div class="step-num pending">4</div><div class="step-body"><div class="step-title">Snapshot & forensics</div><div class="step-desc">Preserve memory dump and disk image before any remediation steps begin.</div><div class="step-time">Pending</div></div></div>
+          <div class="step"><div class="step-num pending">5</div><div class="step-body"><div class="step-title">Restore from backup</div><div class="step-desc">Initiate clean restore from last verified backup checkpoint (13:00 snapshot).</div><div class="step-time">Pending</div></div></div>
+          <div class="step"><div class="step-num pending">6</div><div class="step-body"><div class="step-title">Post-incident report</div><div class="step-desc">Generate full report with timeline, affected files, attack vector, and recommended mitigations.</div><div class="step-time">Pending</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="section-logs" class="section">
+      <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;">
+        <input class="form-input" type="text" placeholder="Filter logs..." style="max-width:280px;"/>
+        <select class="form-select" style="width:140px;"><option>All levels</option><option>Critical</option><option>Warning</option><option>Info</option></select>
+        <button class="btn btn-accent" style="margin-left:auto;">EXPORT LOGS</button>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">SYSTEM EVENT LOG</span><span style="font-size:10px;color:var(--text2);">Stored in MySQL · alerts_log table</span></div>
+        <div style="padding:8px 0;">
+          <div class="log-line"><span class="log-ts">2024-01-15 14:02:11</span><span class="log-level crit">CRIT</span><span class="log-msg">Ransomware detected on DESKTOP-7F2A — 847 files affected · Host isolated</span></div>
+          <div class="log-line"><span class="log-ts">2024-01-15 14:02:01</span><span class="log-level crit">CRIT</span><span class="log-msg">Phishing page submitted — credentials harvested from 192.168.1.44 · Blocked</span></div>
+          <div class="log-line"><span class="log-ts">2024-01-15 13:51:08</span><span class="log-level warn">WARN</span><span class="log-msg">Port 3389 exposed to internet · Firewall rule missing on 192.168.1.12</span></div>
+          <div class="log-line"><span class="log-ts">2024-01-15 13:28:34</span><span class="log-level warn">WARN</span><span class="log-msg">Suspicious email flagged — sender: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6300060c23000c0e13570d1a4d000c0e">[email&#160;protected]</a> · Score: 71/100</span></div>
+          <div class="log-line"><span class="log-ts">2024-01-15 13:00:00</span><span class="log-level info">INFO</span><span class="log-msg">Scheduled port scan started — target: 192.168.1.0/24</span></div>
+          <div class="log-line"><span class="log-ts">2024-01-15 13:04:12</span><span class="log-level info">INFO</span><span class="log-msg">Port scan completed — 23 open ports · 5 critical findings</span></div>
+          <div class="log-line"><span class="log-ts">2024-01-15 12:44:19</span><span class="log-level warn">WARN</span><span class="log-msg">MySQL port 3306 accessible externally — immediate action required</span></div>
+          <div class="log-line"><span class="log-ts">2024-01-15 12:11:02</span><span class="log-level ok">OK</span><span class="log-msg">Phishing simulation completed — report generated · 4 users trained</span></div>
+          <div class="log-line"><span class="log-ts">2024-01-15 11:34:55</span><span class="log-level crit">CRIT</span><span class="log-msg">Fake invoice phishing blocked — sender: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0169734171607871606d2c7764736867782f6f6475">[email&#160;protected]</a> · Score: 87</span></div>
+          <div class="log-line"><span class="log-ts">2024-01-15 10:00:00</span><span class="log-level ok">OK</span><span class="log-msg">System startup complete · All monitoring modules active</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   CyberDefense — API-Connected Frontend
+   Backend: Flask running on http://localhost:5000
+   ═══════════════════════════════════════════════ */
+
+// Use same origin when served by Flask (http://localhost:5000/),
+// so the page and API share one origin — no CORS preflight needed.
+const API = (window.location.protocol !== 'file:')
+  ? window.location.origin   // served by Flask → '' same-origin calls work perfectly
+  : 'http://localhost:5000'; // fallback if accidentally opened as file://
+
+/* ─── Navigation ─── */
+const sections = ['overview','phishing','network','ransomware','logs'];
+const titles = { overview:'System Overview', phishing:'Phishing Detection', network:'Network Assessment', ransomware:'Ransomware Response', logs:'System Logs' };
+
+function showSection(name, navEl) {
+  sections.forEach(s => {
+    const el = document.getElementById('section-'+s);
+    if (el) el.classList.remove('visible');
+  });
+  const target = document.getElementById('section-'+name);
+  if (target) target.classList.add('visible');
+  document.getElementById('page-title').textContent = titles[name] || name;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+  if (name === 'logs') loadLogs();
+  if (name === 'network') loadNetworkResults();
+  if (name === 'ransomware') loadRansomwareIncidents();
+}
+
+function switchTab(tabEl, contentId) {
+  const bar = tabEl.closest('.tab-bar');
+  bar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tabEl.classList.add('active');
+  const section = document.getElementById('section-phishing');
+  section.querySelectorAll('[id^="phish-"]').forEach(el => el.style.display = 'none');
+  const target = document.getElementById(contentId);
+  if (target) target.style.display = 'block';
+  if (contentId === 'phish-history') loadPhishingHistory();
+}
+
+/* ─── Live clock ─── */
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('en-GB',{hour12:false});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ─── Utility ─── */
+async function apiFetch(path, opts={}) {
+  // Always send JSON content-type on POST/PUT
+  if (opts.body && !opts.headers) opts.headers = {'Content-Type':'application/json'};
+  let res;
+  try {
+    res = await fetch(API + path, opts);
+  } catch(networkErr) {
+    // Network-level failure: backend not running OR opened as file:// (CORS block)
+    if (window.location.protocol === 'file:') {
+      throw new Error('FILE_PROTOCOL');
+    }
+    throw new Error('NETWORK');
+  }
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+function setBtn(btn, loading) {
+  if (loading) { btn.dataset.orig = btn.textContent; btn.textContent = '...'; btn.disabled = true; }
+  else { btn.textContent = btn.dataset.orig || btn.textContent; btn.disabled = false; }
+}
+
+function notify(msg, type='ok') {
+  const colours = { ok:'var(--accent)', warn:'var(--amber)', crit:'var(--red)', info:'var(--blue)' };
+  const n = document.createElement('div');
+  n.style.cssText = `position:fixed;bottom:20px;right:20px;padding:10px 18px;border-radius:6px;
+    background:var(--surface2);border:1px solid ${colours[type]||colours.ok};
+    color:${colours[type]||colours.ok};font-size:11px;z-index:9999;max-width:340px;`;
+  n.textContent = msg;
+  document.body.appendChild(n);
+  setTimeout(() => n.remove(), 3500);
+}
+
+function riskBadge(risk) {
+  const map = {
+    CRITICAL: 'rgba(255,68,85,0.1);color:var(--red);border:1px solid rgba(255,68,85,0.3)',
+    HIGH:     'rgba(255,170,0,0.1);color:var(--amber);border:1px solid rgba(255,170,0,0.3)',
+    MEDIUM:   'rgba(255,170,0,0.1);color:var(--amber);border:1px solid rgba(255,170,0,0.3)',
+    LOW:      'rgba(0,200,150,0.1);color:var(--accent);border:1px solid rgba(0,200,150,0.3)',
+  };
+  const s = map[risk] || map.LOW;
+  return `<span class="port-badge" style="background:${s};">${risk}</span>`;
+}
+
+function levelBadge(level) {
+  const map = {
+    CRIT: 'crit', WARN: 'warn', INFO: 'info', OK: 'ok'
+  };
+  return `<span class="log-level ${map[level]||'info'}">${level}</span>`;
+}
+
+/* ─── OVERVIEW — load summary stats ─── */
+async function loadOverview() {
+  try {
+    const data = await apiFetch('/api/overview'); // FIXED apifetch typo
+    // Metric cards
+    document.querySelector('.metric-card.danger .metric-value').textContent =
+      (data.alerts.critical + data.alerts.warning + data.alerts.info + data.alerts.ok);
+    document.querySelector('.metric-card.warn .metric-value').textContent =
+      data.phishing_emails_today;
+    document.querySelector('.metric-card.info .metric-value').textContent =
+      (data.ports.critical + data.ports.high + data.ports.medium + data.ports.low);
+    // Top pills
+    const pills = document.querySelectorAll('.topbar-right .pill');
+    if (pills[0]) pills[0].textContent = data.alerts.critical + ' Critical';
+    if (pills[1]) pills[1].textContent = data.alerts.warning + ' Warnings';
+    // System status
+    const statusEl = document.querySelector('.status-dot');
+    if (statusEl && data.system_status === 'ACTIVE') statusEl.style.background = 'var(--accent)';
+    // Live alerts feed — fetch logs
+    const logs = await apiFetch('/api/logs'); // FIXED apifetch typo
+    const feed = document.querySelector('#section-overview .panel-body');
+    if (feed && logs.length) {
+      feed.innerHTML = logs.map(l => {
+        const dotClass = l.level === 'CRIT' ? 'dot-red' : l.level === 'WARN' ? 'dot-amber' : l.level === 'INFO' ? 'dot-blue' : 'dot-green';
+        const ago = timeSince(l.timestamp);
+        return `<div class="alert-item">
+          <div class="alert-dot ${dotClass}"></div>
+          <div class="alert-body">
+            <div class="alert-title">${l.message}</div>
+            <div class="alert-meta">Source: ${l.source}</div>
+          </div>
+          <div class="alert-time">${ago}</div>
+        </div>`;
+      }).join('');
+    }
+  } catch(e) {
+    if (e.message === 'FILE_PROTOCOL') {
+      notify('Open via Flask, not as a file — run: python app.py  then go to http://localhost:5000', 'crit');
+    } else {
+      notify('Backend offline — run: python app.py', 'crit');
+    }
+  }
+}
+
+function timeSince(ts) {
+  const diff = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (diff < 60) return diff + 's ago';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+/* ─── PHISHING — Launch Simulation (calls /api/phishing/simulate) ─── */
+async function runAnalysis() {
+  const inputs = document.querySelectorAll('#section-phishing .form-input');
+  const textarea = document.querySelector('#section-phishing .form-textarea');
+  const btn = document.querySelector('#phish-simulate .btn-accent');
+  setBtn(btn, true);
+  try {
+    const sender  = inputs[0] ? inputs[0].value : '';
+    const subject = inputs[1] ? inputs[1].value : '';
+    const body    = textarea ? textarea.value : '';
+    const data = await apiFetch('/api/phishing/analyse', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ sender, subject, body })
+    });
+    renderAnalysisPanel(data, sender);
+    notify(`Analysis complete — Score: ${data.score}/100 · ${data.verdict}`,
+           data.verdict === 'PHISHING' ? 'crit' : data.verdict === 'SUSPICIOUS' ? 'warn' : 'ok');
+  } catch(e) {
+    notify('Cannot reach backend', 'crit');
+  } finally {
+    setBtn(btn, false);
+  }
+}
+
+function renderAnalysisPanel(d, sender='') {
+  const panel = document.getElementById('analysis-panel');
+  panel.style.display = 'block';
+  const verdictColor = d.verdict === 'PHISHING' ? 'var(--red)' : d.verdict === 'SUSPICIOUS' ? 'var(--amber)' : 'var(--accent)';
+  const pillClass    = d.verdict === 'PHISHING' ? 'pill-red' : d.verdict === 'SUSPICIOUS' ? 'pill-amber' : 'pill-green';
+  document.querySelector('#analysis-panel .panel-head .pill').className = `pill ${pillClass}`;
+  document.querySelector('#analysis-panel .panel-head .pill').style.fontSize = '9px';
+  document.querySelector('#analysis-panel .panel-head .pill').textContent = d.verdict;
+
+  function row(pass, label, detail) {
+    const icon  = pass ? 'check-pass' : 'check-fail';
+    const sym   = pass ? '✓' : '✕';
+    const color = pass ? 'var(--accent)' : 'var(--red)';
+    return `<div class="analysis-row">
+      <div class="check-icon ${icon}">${sym}</div>
+      <div class="check-label">${label}</div>
+      <div class="check-result" style="color:${color};">${detail}</div>
+    </div>`;
+  }
+
+  panel.querySelector('div:last-child').innerHTML =
+    row(d.spf_pass,   'SPF Record',              d.spf_pass  ? 'PASS' : 'MISSING — no SPF policy') +
+    row(d.dkim_pass,  'DKIM Signature',           d.dkim_pass ? 'PASS' : 'MISSING — email unsigned') +
+    row(d.dmarc_pass, 'DMARC Policy',             d.dmarc_pass? 'PASS' : 'FAIL — no DMARC enforcement') +
+    row(!d.has_urgency,     'Urgency language',   d.has_urgency        ? 'DETECTED — high-pressure wording' : 'None detected') +
+    row(!d.has_suspicious_link,'Suspicious links',d.has_suspicious_link? 'FOUND — possible redirect' : 'None detected') +
+    row(!d.has_spoofed_domain,'Sender domain',    d.has_spoofed_domain ? `SPOOFED — ${sender}` : 'Appears legitimate') +
+    `<div class="analysis-row">
+       <div class="check-icon ${d.score>=70?'check-fail':d.score>=40?'check-warn':'check-pass'}">${d.score>=70?'✕':d.score>=40?'!':'✓'}</div>
+       <div class="check-label">Phishing score</div>
+       <div class="check-result" style="color:${verdictColor};font-weight:bold;">${d.score} / 100 — ${d.verdict}</div>
+     </div>`;
+
+  panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+/* ─── PHISHING — Analyze incoming email (Detect tab) ─── */
+async function analyzeIncoming() {
+  const textarea = document.querySelector('#phish-detect .form-textarea');
+  const btn = document.querySelector('#phish-detect .btn-accent');
+  const raw = textarea ? textarea.value.trim() : '';
+  if (!raw) { notify('Paste email content first', 'warn'); return; }
+  setBtn(btn, true);
+  // Parse From / Subject / body from pasted headers
+  const fromMatch    = raw.match(/^From:\s*(.+)$/mi);
+  const subjectMatch = raw.match(/^Subject:\s*(.+)$/mi);
+  const sender  = fromMatch    ? fromMatch[1].trim()    : '';
+  const subject = subjectMatch ? subjectMatch[1].trim() : '';
+  const body    = raw;
+  try {
+    const data = await apiFetch('/api/phishing/analyse', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ sender, subject, body })
+    });
+    notify(`Score: ${data.score}/100 · ${data.verdict}`,
+           data.verdict === 'PHISHING' ? 'crit' : data.verdict === 'SUSPICIOUS' ? 'warn' : 'ok');
+    // Show result below textarea
+    let resultDiv = document.querySelector('#phish-detect .analysis-result');
+    if (!resultDiv) {
+      resultDiv = document.createElement('div');
+      resultDiv.className = 'analysis-result';
+      resultDiv.style.marginTop = '12px';
+      document.querySelector('#phish-detect .btn-accent').insertAdjacentElement('afterend', resultDiv);
+    }
+    const colour = data.verdict==='PHISHING'?'var(--red)':data.verdict==='SUSPICIOUS'?'var(--amber)':'var(--accent)';
+    resultDiv.innerHTML = `<div style="padding:12px;border:1px solid ${colour};border-radius:6px;color:${colour};font-size:12px;margin-top:10px;">
+      <strong>${data.verdict}</strong> · Score: ${data.score}/100 · SPF: ${data.spf_pass?'✓':'✕'} · DKIM: ${data.dkim_pass?'✓':'✕'} · Urgency: ${data.has_urgency?'YES':'NO'} · Suspicious link: ${data.has_suspicious_link?'YES':'NO'}
+    </div>`;
+  } catch(e) {
+    notify('Cannot reach backend', 'crit');
+  } finally {
+    setBtn(btn, false);
+  }
+}
+
+/* ─── PHISHING — History ─── */
+async function loadPhishingHistory() {
+  try {
+    const rows = await apiFetch('/api/phishing/history?limit=20');
+    const tbody = document.querySelector('#phish-history tbody');
+    if (!tbody) return;
+    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text2);padding:16px;">No history yet</td></tr>'; return; }
+    tbody.innerHTML = rows.map(r => {
+      const verdColor = r.verdict==='PHISHING'?'var(--red)':r.verdict==='SUSPICIOUS'?'var(--amber)':'var(--accent)';
+      const badgeSty  = r.verdict==='PHISHING'?'rgba(255,68,85,0.1);color:var(--red);border:1px solid rgba(255,68,85,0.3)':
+                        r.verdict==='SUSPICIOUS'?'rgba(255,170,0,0.1);color:var(--amber);border:1px solid rgba(255,170,0,0.3)':
+                        'rgba(0,200,150,0.1);color:var(--accent);border:1px solid rgba(0,200,150,0.3)';
+      return `<tr>
+        <td style="color:var(--text2);">${r.timestamp}</td>
+        <td>${r.sender||'—'}</td>
+        <td>${r.subject||'—'}</td>
+        <td>Analysis</td>
+        <td style="color:${verdColor};">${r.score}</td>
+        <td><span class="port-badge" style="background:${badgeSty};">${r.verdict}</span></td>
+      </tr>`;
+    }).join('');
+  } catch(e) { notify('Failed to load history', 'warn'); }
+}
+
+/* ─── NETWORK — Start Scan ─── */
+async function startScan() {
+  const input = document.querySelector('#section-network .form-input');
+  const btn = document.querySelector('#section-network .btn-accent');
+  const target = input ? input.value.trim() : '192.168.1.0/24';
+  setBtn(btn, true);
+  notify('Port scan started…', 'info');
+  try {
+    const data = await apiFetch('/api/network/scan', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ target })
+    });
+    renderNetworkResults(data.results, target);
+    updateNetworkMetrics(data.results);
+    notify(`Scan complete — ${data.total} ports found`, 'ok');
+  } catch(e) {
+    notify('Scan failed — backend offline?', 'crit');
+  } finally {
+    setBtn(btn, false);
+  }
+}
+
+async function loadNetworkResults() {
+  try {
+    const rows = await apiFetch('/api/network/results'); // FIXED apifetch typo
+    if (rows.length) { renderNetworkResults(rows); updateNetworkMetrics(rows); }
+  } catch(e) {}
+}
+
+function renderNetworkResults(results, target='') {
+  const tbody = document.querySelector('#section-network tbody');
+  if (!tbody) return;
+  if (target) {
+    const title = document.querySelector('#section-network .panel-head .panel-title');
+    if (title) title.textContent = `PORT SCAN RESULTS — ${target}`;
+  }
+  tbody.innerHTML = results.map(r =>
+    `<tr>
+      <td>${r.host}</td>
+      <td>${r.port}</td>
+      <td>${r.service}</td>
+      <td style="color:var(--accent);">OPEN</td>
+      <td>${riskBadge(r.risk)}</td>
+      <td style="color:var(--text2);">${r.notes||''}</td>
+    </tr>`
+  ).join('');
+}
+
+function updateNetworkMetrics(results) {
+  const crit = results.filter(r=>r.risk==='CRITICAL').length;
+  const high = results.filter(r=>r.risk==='HIGH').length;
+  const low  = results.filter(r=>r.risk==='LOW').length;
+  const metricCards = document.querySelectorAll('#section-network .metric-card');
+  if (metricCards[0]) metricCards[0].querySelector('.metric-value').textContent = results.length;
+  if (metricCards[1]) metricCards[1].querySelector('.metric-value').textContent = crit + high;
+  if (metricCards[2]) metricCards[2].querySelector('.metric-value').textContent = low;
+}
+
+/* ─── NETWORK — Export CSV ─── */
+function exportNetworkCSV() {
+  window.open(API + '/api/logs/export', '_blank');
+}
+
+/* ─── RANSOMWARE — Start Monitoring ─── */
+async function startMonitoring() {
+  const dirInput  = document.querySelector('#section-ransomware .form-input');
+  const sensSelect= document.querySelector('#section-ransomware .form-select');
+  const btn = document.querySelector('#section-ransomware .btn-accent');
+  const directory   = dirInput   ? dirInput.value.trim()   : 'C:\\Users\\Desktop\\Documents';
+  const sensitivity = sensSelect ? sensSelect.options[sensSelect.selectedIndex].text.split(' ')[0] : 'High';
+  setBtn(btn, true);
+  try {
+    // FIXED syntax and endpoint error here
+    await apiFetch('/api/ransomware/monitor/start', { 
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ directory, sensitivity })
+    });
+    notify(`Monitoring started: ${directory}`, 'ok');
+    // Update detection indicators to green
+    document.querySelectorAll('#section-ransomware .check-result').forEach(el => {
+      el.textContent = 'Active';
+      el.style.color = 'var(--accent)';
+    });
+  } catch(e) {
+    notify('Failed to start monitoring', 'crit');
+  } finally {
+    setBtn(btn, false);
+  }
+}
+
+/* ─── RANSOMWARE — Trigger Test ─── */
+async function triggerTest() {
+  const btn = document.querySelector('#section-ransomware .btn-danger');
+  setBtn(btn, true);
+  try {
+    const data = await apiFetch('/api/ransomware/test', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ host: 'DESKTOP-TEST' })
+    });
+    notify(`⚠ RANSOMWARE DETECTED — ${data.files_affected} files on ${data.host}`, 'crit');
+    loadRansomwareIncidents();
+  } catch(e) {
+    notify('Test failed', 'crit');
+  } finally {
+    setBtn(btn, false);
+  }
+}
+
+/* ─── RANSOMWARE — Incidents + Playbook ─── */
+let currentIncidentId = null;
+
+async function loadRansomwareIncidents() {
+  try {
+    const incidents = await apiFetch('/api/ransomware/incidents');
+    if (!incidents.length) return;
+    const inc = incidents[0]; // Most recent
+    currentIncidentId = inc.id;
+    renderPlaybook(inc.playbook_step, inc);
+  } catch(e) {}
+}
+
+function renderPlaybook(currentStep, inc) {
+  const steps = [
+    { title:'Detection triggered',  desc:`Ransomware behavior detected — ${inc.files_affected} files renamed with ${inc.extension||'.enc'} extension.` },
+    { title:'Network isolation',    desc:`Host ${inc.host} disconnected from network. All connections dropped.` },
+    { title:'Alert team + log',     desc:'Notifying security team. Writing incident to database.' },
+    { title:'Snapshot & forensics', desc:'Preserve memory dump and disk image before remediation.' },
+    { title:'Restore from backup',  desc:'Initiate clean restore from last verified backup checkpoint.' },
+    { title:'Post-incident report', desc:'Generate full report with timeline, attack vector, and mitigations.' },
+  ];
+  const container = document.querySelector('.playbook');
+  if (!container) return;
+  container.innerHTML = steps.map((s, i) => {
+    const n = i + 1;
+    const cls = n < currentStep ? 'done' : n === currentStep ? 'active' : 'pending';
+    const timeStr = n < currentStep  ? `Completed · ${inc.timestamp}` :
+                    n === currentStep ? `In progress · ${inc.timestamp}` : 'Pending';
+    return `<div class="step">
+      <div class="step-num ${cls}">${n}</div>
+      <div class="step-body">
+        <div class="step-title">${s.title}</div>
+        <div class="step-desc">${s.desc}</div>
+        <div class="step-time">${timeStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+  // Update status label
+  const badge = document.querySelector('#section-ransomware .module-badge');
+  if (badge) badge.textContent = inc.status;
+}
+
+async function advancePlaybook() {
+  if (!currentIncidentId) { notify('No active incident', 'warn'); return; }
+  try {
+    const data = await apiFetch(`/api/ransomware/playbook/${currentIncidentId}/advance`, {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}'
+    });
+    notify(`Playbook advanced to step ${data.playbook_step}`, 'info');
+    loadRansomwareIncidents();
+  } catch(e) { notify('Failed to advance playbook', 'crit'); }
+}
+
+/* ─── LOGS — load and filter ─── */
+async function loadLogs() {
+  const search   = document.querySelector('#section-logs .form-input')?.value || '';
+  const levelSel = document.querySelector('#section-logs .form-select');
+  const levelVal = levelSel ? levelSel.value : '';
+  const level    = levelVal === 'All levels' || !levelVal ? '' : levelVal.substring(0,4).toUpperCase().replace('CRIT','CRIT').replace('WARN','WARN').replace('INFO','INFO');
+  try {
+    const params = new URLSearchParams({ limit: 50 });
+    if (search) params.set('search', search);
+    if (level)  params.set('level',  level);
+    const rows = await apiFetch(`/api/logs?${params}`);
+    const container = document.querySelector('#section-logs .panel > div:last-child');
+    if (!container) return;
+    container.innerHTML = rows.map(r =>
+      `<div class="log-line">
+        <span class="log-ts">${r.timestamp}</span>
+        ${levelBadge(r.level)}
+        <span class="log-msg">${r.message}</span>
+      </div>`
+    ).join('') || '<div style="color:var(--text2);padding:16px;">No logs match filter</div>';
+  } catch(e) { notify('Failed to load logs', 'warn'); }
+}
+
+function exportLogs() {
+  window.location.href = API + '/api/logs/export';
+}
+
+/* ─── Wire up buttons after DOM is ready ─── */
+document.addEventListener('DOMContentLoaded', () => {
+  // Clock
+  updateClock();
+
+  // Overview
+  loadOverview();
+  setInterval(loadOverview, 30000); // refresh every 30s
+
+  // Phishing — Launch Simulation button
+  const launchBtn = document.querySelector('#phish-simulate .btn-accent');
+  if (launchBtn) launchBtn.onclick = runAnalysis;
+
+  // Phishing — Analyze Email button (detect tab)
+  const analyzeBtn = document.querySelector('#phish-detect .btn-accent');
+  if (analyzeBtn) analyzeBtn.onclick = analyzeIncoming;
+
+  // Network — Start Scan button
+  const scanBtn = document.querySelector('#section-network .btn-accent');
+  if (scanBtn) scanBtn.onclick = startScan;
+
+  // Network — Export CSV
+  const exportNetBtn = document.querySelector('#section-network .panel-action');
+  if (exportNetBtn) exportNetBtn.onclick = exportNetworkCSV;
+
+  // Ransomware — Start Monitoring
+  const monitorBtn = document.querySelector('#section-ransomware .btn-accent');
+  if (monitorBtn) monitorBtn.onclick = startMonitoring;
+
+  // Ransomware — Trigger Test
+  const testBtn = document.querySelector('#section-ransomware .btn-danger');
+  if (testBtn) testBtn.onclick = triggerTest;
+
+  // Ransomware — Run Playbook
+  const playbookBtn = document.querySelector('#section-ransomware .panel-action');
+  if (playbookBtn) playbookBtn.onclick = advancePlaybook;
+
+  // Logs — Filter input (live search)
+  const logInput = document.querySelector('#section-logs .form-input');
+  if (logInput) logInput.addEventListener('input', () => loadLogs());
+
+  const logSelect = document.querySelector('#section-logs .form-select');
+  if (logSelect) logSelect.addEventListener('change', () => loadLogs());
+
+  // Logs — Export
+  const exportLogsBtn = document.querySelector('#section-logs .btn-accent');
+  if (exportLogsBtn) exportLogsBtn.onclick = exportLogs;
+
+  // Overview — View All → goes to logs
+  const viewAllBtn = document.querySelector('#section-overview .panel-action');
+  if (viewAllBtn) viewAllBtn.onclick = () => {
+    showSection('logs', document.querySelector('[onclick*=logs]'));
+  };
+});
+</script>
+</body>
+</html>
