@@ -1,5 +1,3 @@
--- MySQL dump 10.13  Distrib 8.0.45, for Win64 (x86_64)
---
 -- Host: 127.0.0.1    Database: cyber_db
 -- ------------------------------------------------------
 -- Server version	8.0.45
@@ -14,6 +12,7 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+--
 
 --
 -- Table structure for table `network`
