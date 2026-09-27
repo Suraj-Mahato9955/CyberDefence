@@ -1,5 +1,3 @@
--- MySQL dump 10.13  Distrib 8.0.45, for Win64 (x86_64)
---
 -- Host: 127.0.0.1    Database: cyber_db
 -- ------------------------------------------------------
 -- Server version	8.0.45
@@ -9,6 +7,7 @@
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!50503 SET NAMES utf8 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+--67876589 set 
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
