@@ -1,5 +1,3 @@
--- MySQL dump 10.13  Distrib 8.0.45, for Win64 (x86_64)
---
 -- Host: 127.0.0.1    Database: cyber_db
 -- ------------------------------------------------------
 -- Server version	8.0.45
@@ -38,7 +36,9 @@ CREATE TABLE `ransomware` (
 LOCK TABLES `ransomware` WRITE;
 /*!40000 ALTER TABLE `ransomware` DISABLE KEYS */;
 INSERT INTO `ransomware` VALUES (1,10,'ACTIVE','2026-03-31 09:57:10');
+--
 /*!40000 ALTER TABLE `ransomware` ENABLE KEYS */;
+--
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
