@@ -96,7 +96,7 @@ Cyber Defence/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/wasim76782/CyberDefence.git
+git clone https://github.com/Suraj_Mahato9955/CyberDefence.git
 ```
 
 ### 2. Open the project
