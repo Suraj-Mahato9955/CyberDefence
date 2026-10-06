@@ -1,5 +1,5 @@
 -- Host: 127.0.0.1    Database: cyber_db
--- ------------------------------------------------------
+-- ---------------------------------------------------------
 -- Server version	8.0.45
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -30,9 +30,9 @@ CREATE TABLE `phishing` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Dumping data for table `phishing`
---
+----
+---- Dumping data for table `phishing`
+----
 
 LOCK TABLES `phishing` WRITE;
 /*!40000 ALTER TABLE `phishing` DISABLE KEYS */;
